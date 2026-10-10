@@ -32,16 +32,11 @@ func validateAccessLogSyslogTemplate(template string, c accesslog.Config) error 
 	}
 	var cfg struct {
 		Log struct {
-			Access string `json:"access"`
-			Level  string `json:"loglevel"`
+			Level string `json:"loglevel"`
 		} `json:"log"`
 	}
 	if err := json.Unmarshal([]byte(template), &cfg); err != nil {
 		return err
-	}
-	path := strings.TrimSpace(cfg.Log.Access)
-	if path == "" || strings.EqualFold(path, "none") {
-		return errors.New("syslog requires an enabled local access-log file")
 	}
 	if strings.EqualFold(strings.TrimSpace(cfg.Log.Level), "none") {
 		return errors.New("syslog requires Xray log level other than none")

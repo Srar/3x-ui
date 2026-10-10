@@ -3,11 +3,11 @@ title: Access-log syslog delivery
 description: Forward live Xray access logs to a remote syslog receiver.
 ---
 
-In **Xray Settings → Log Configs**, enable a local access-log file, then turn on **Syslog delivery** beneath it. The switch reveals three fields: transport protocol, receiver host, and port. Enter a hostname, IPv4 or IPv6 address without a port or brackets. Defaults are UDP and port 514; Xray log level must not be `none`.
+In **Xray Settings → Log Configs**, turn on **Syslog delivery** beneath the access-log selector. Local file logging is independent: choose `./access.log` to retain it or `none` to forward only to syslog. The switch reveals three fields: transport protocol, receiver host, and port. Enter a hostname, IPv4 or IPv6 address without a port or brackets. Defaults are UDP and port 514; Xray log level must not be `none`.
 
 Use the page's existing Save button. Switching delivery on or off restarts a running Xray. Changing the destination does not restart it. A manually stopped Xray stays stopped. Turning delivery off hides the fields and retains their values.
 
-The panel receives live access records from Xray stdout and distributes them to the configured local file and an independent syslog queue. It does not read or replay `access.log`. Existing log viewing, daily truncation and size cleanup continue. Only local Xray access events are forwarded; DNS logs, diagnostics and internal API calls are excluded. Xray address masking also applies to forwarded records.
+The panel receives live access records from Xray stdout and enqueues them for syslog delivery, also writing them to the local file when local logging is enabled. It does not read or replay `access.log`. When local logging is enabled, existing log viewing, daily truncation and size cleanup continue. Only local Xray access events are forwarded; DNS logs, diagnostics and internal API calls are excluded. Xray address masking also applies to forwarded records.
 
 Messages use RFC 5424 with `local0/info`, app name `3x-ui` and message ID `access`. TCP receivers must accept RFC 6587 octet-counted framing. JSON fields are `DateTime` (UTC), `FromAddress`, `ToAddress`, `Inbound`, `Outbound`, `Email` and `Raw`. Missing timestamps are `null`; missing strings are empty.
 

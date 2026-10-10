@@ -431,12 +431,7 @@ export default function BasicsTab({
               value={accessLogSyslog}
               onChange={onChangeAccessLogSyslog}
               restartRequired={accessLogSyslogRestartRequired}
-              localLogEnabled={
-                typeof log.access === 'string' &&
-                log.access.trim() !== '' &&
-                log.access.toLowerCase() !== 'none' &&
-                log.loglevel !== 'none'
-              }
+              logLevelEnabled={String(log.loglevel).trim().toLowerCase() !== 'none'}
             />
           )}
           <SettingListItem

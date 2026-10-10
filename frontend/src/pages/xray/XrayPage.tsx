@@ -200,13 +200,8 @@ export default function XrayPage() {
     }
     if (xs.accessLogSyslog.enabled) {
       const log = templateSettings?.log;
-      if (
-        typeof log?.access !== 'string' ||
-        !log.access.trim() ||
-        log.access.trim().toLowerCase() === 'none' ||
-        String(log.loglevel).trim().toLowerCase() === 'none'
-      ) {
-        messageApi.error(t('pages.xray.syslog.localLogRequired'));
+      if (String(log?.loglevel).trim().toLowerCase() === 'none') {
+        messageApi.error(t('pages.xray.syslog.logLevelRequired'));
         return;
       }
     }

@@ -33,8 +33,13 @@ func (c *Config) runtimeJSON() ([]byte, error) {
 	snapshot := *c
 	if c.AccessLogCapture {
 		var log map[string]any
-		if err := json.Unmarshal(c.LogConfig, &log); err != nil {
-			return nil, err
+		if len(c.LogConfig) != 0 {
+			if err := json.Unmarshal(c.LogConfig, &log); err != nil {
+				return nil, err
+			}
+		}
+		if log == nil {
+			log = make(map[string]any)
 		}
 		log["access"] = ""
 		data, err := json.Marshal(log)
@@ -50,7 +55,11 @@ func (c *Config) accessFile() string {
 		Access string `json:"access"`
 	}
 	_ = json.Unmarshal(c.LogConfig, &log)
-	return log.Access
+	path := strings.TrimSpace(log.Access)
+	if path == "" || strings.EqualFold(path, "none") {
+		return "none"
+	}
+	return path
 }
 
 // accessOutput only consumes stdout. Stderr retains its separate diagnostic
@@ -119,6 +128,9 @@ func (w *accessOutput) line(line string) bool {
 	// Enqueue before disk I/O: a local filesystem failure cannot suppress syslog.
 	if isAccess {
 		accesslog.Publish(line)
+	}
+	if strings.TrimSpace(w.path) == "" || strings.EqualFold(strings.TrimSpace(w.path), "none") {
+		return true
 	}
 	AccessLogFileMu.Lock()
 	f, err := os.OpenFile(w.path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)

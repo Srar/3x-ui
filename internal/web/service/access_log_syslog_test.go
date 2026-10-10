@@ -30,8 +30,8 @@ func TestSaveXraySettingsSyslogAndLegacyClient(t *testing.T) {
 		t.Fatalf("legacy save = %+v, %v", preserved, err)
 	}
 	// A validation error must not partially replace either template or test URL.
-	if _, err = s.SaveXraySettings(strings.Replace(template, "./access.log", "none", 1), "https://invalid.example", nil); err == nil {
-		t.Fatal("disabled log accepted")
+	if _, err = s.SaveXraySettings(strings.Replace(template, "warning", "none", 1), "https://invalid.example", nil); err == nil {
+		t.Fatal("disabled log level accepted")
 	}
 	url, err := s.GetXrayOutboundTestUrl()
 	if err != nil || url != "https://changed.example" {
@@ -70,9 +70,26 @@ func TestSaveXraySettingsTransactionRollback(t *testing.T) {
 }
 func TestValidateSyslogLogConfiguration(t *testing.T) {
 	c := accesslog.Config{Enabled: true, Protocol: "udp", Host: "host", Port: 514}
-	for _, template := range []string{`{}`, `{"log":{"access":"none"}}`, `{"log":{"access":"./access.log","loglevel":"NoNe"}}`} {
+	for _, template := range []string{`{}`, `{"log":null}`, `{"log":{}}`, `{"log":{"access":"none"}}`, `{"log":{"access":"","loglevel":"warning"}}`} {
+		if err := validateAccessLogSyslogTemplate(template, c); err != nil {
+			t.Fatalf("rejected optional local log %s: %v", template, err)
+		}
+	}
+	for _, template := range []string{`{"log":{"loglevel":"none"}}`, `{"log":{"access":"./access.log","loglevel":"NoNe"}}`} {
 		if validateAccessLogSyslogTemplate(template, c) == nil {
-			t.Fatalf("accepted %s", template)
+			t.Fatalf("accepted disabled log level %s", template)
+		}
+	}
+}
+
+func TestSaveXraySettingsSyslogWithoutLocalFile(t *testing.T) {
+	setupSettingTestDB(t)
+	s := &XraySettingService{}
+	c := accesslog.Config{Enabled: true, Protocol: "udp", Host: "receiver.example", Port: 514}
+	for _, template := range []string{`{}`, `{"log":null}`, `{"log":{"access":"none","loglevel":"warning"}}`, `{"log":{"access":"","loglevel":"warning"}}`} {
+		saved, err := s.SaveXraySettings(template, "https://test.example", &c)
+		if err != nil || saved != c {
+			t.Fatalf("syslog-only save: %+v, %v", saved, err)
 		}
 	}
 }

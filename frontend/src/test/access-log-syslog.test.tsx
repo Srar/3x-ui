@@ -1,19 +1,20 @@
 import { useState } from 'react';
 import { fireEvent, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import AccessLogSyslog from '@/pages/xray/basics/AccessLogSyslog';
+import BasicsTab from '@/pages/xray/basics/BasicsTab';
 import { DEFAULT_ACCESS_LOG_SYSLOG, AccessLogSyslogSchema } from '@/schemas/xray';
 import { renderWithProviders } from './test-utils';
 
-function Editor({ localLogEnabled = true }: { localLogEnabled?: boolean }) {
+function Editor({ logLevelEnabled = true }: { logLevelEnabled?: boolean }) {
   const [value, setValue] = useState(DEFAULT_ACCESS_LOG_SYSLOG);
   return (
     <AccessLogSyslog
       value={value}
       onChange={setValue}
       restartRequired={value.enabled}
-      localLogEnabled={localLogEnabled}
+      logLevelEnabled={logLevelEnabled}
     />
   );
 }
@@ -40,13 +41,33 @@ describe('access-log syslog controls', () => {
     );
   });
 
-  it('explains the local-log requirement', () => {
-    renderWithProviders(<Editor localLogEnabled={false} />);
+  it('allows syslog in the log tab when local file logging is disabled', () => {
+    renderWithProviders(
+      <BasicsTab
+        templateSettings={{ log: { access: 'none', loglevel: 'warning' } }}
+        setTemplateSettings={vi.fn()}
+        outboundTestUrl=""
+        onChangeOutboundTestUrl={vi.fn()}
+        onResetDefault={vi.fn()}
+        accessLogSyslog={{ ...DEFAULT_ACCESS_LOG_SYSLOG, enabled: true, host: 'receiver.example' }}
+        onChangeAccessLogSyslog={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole('tab', { name: /\bLog$/ }));
+    expect(screen.getByRole('textbox', { name: 'Receiver host' })).toHaveProperty(
+      'value',
+      'receiver.example',
+    );
+    expect(
+      screen.queryByText('Choose an Xray log level other than none before enabling syslog.'),
+    ).toBeNull();
+  });
+
+  it('explains only the log-level requirement', () => {
+    renderWithProviders(<Editor logLevelEnabled={false} />);
     fireEvent.click(screen.getByRole('switch', { name: 'Syslog delivery' }));
     expect(
-      screen.getByText(
-        'Enable a local access-log file and choose an Xray log level other than none before enabling syslog.',
-      ),
+      screen.getByText('Choose an Xray log level other than none before enabling syslog.'),
     ).toBeTruthy();
   });
 

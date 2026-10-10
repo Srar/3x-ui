@@ -1811,9 +1811,9 @@
       "logLevelDesc": "错误日志的日志级别，用于指示需要记录的信息",
       "syslog": {
         "enable": "Syslog 投递",
-        "desc": "将实时访问日志以 JSON 投递至远程 syslog 接收端，本地保存和清理继续生效。",
+        "desc": "将实时访问日志以 JSON 投递至远程 syslog 接收端，本地文件保存可独立关闭。",
         "restart": "保存此开关变更后将重启 Xray。",
-        "localLogRequired": "启用 syslog 前，请启用本地访问日志文件，并将 Xray 日志等级设为 none 以外的值。",
+        "logLevelRequired": "启用 syslog 前，请将 Xray 日志等级设为 none 以外的值。",
         "protocol": "传输协议",
         "host": "接收服务器",
         "hostDesc": "域名、IPv4 或 IPv6 地址，不包含端口。",

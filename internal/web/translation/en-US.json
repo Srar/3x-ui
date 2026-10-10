@@ -1926,9 +1926,9 @@
       "logLevelDesc": "The log level for error logs, indicating the information that needs to be recorded.",
       "syslog": {
         "enable": "Syslog delivery",
-        "desc": "Send live access logs to a remote syslog receiver as JSON. Local logging and cleanup continue.",
+        "desc": "Send live access logs to a remote syslog receiver as JSON. Local file logging can be disabled independently.",
         "restart": "Saving this switch change will restart Xray.",
-        "localLogRequired": "Enable a local access-log file and choose an Xray log level other than none before enabling syslog.",
+        "logLevelRequired": "Choose an Xray log level other than none before enabling syslog.",
         "protocol": "Transport protocol",
         "host": "Receiver host",
         "hostDesc": "Hostname, IPv4 or IPv6 address, without a port.",

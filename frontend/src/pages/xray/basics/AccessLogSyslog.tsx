@@ -9,14 +9,14 @@ interface Props {
   value: AccessLogSyslogConfig;
   onChange: (value: AccessLogSyslogConfig) => void;
   restartRequired: boolean;
-  localLogEnabled: boolean;
+  logLevelEnabled: boolean;
 }
 
 export default function AccessLogSyslog({
   value,
   onChange,
   restartRequired,
-  localLogEnabled,
+  logLevelEnabled,
 }: Props) {
   const { t } = useTranslation();
   const update = (patch: Partial<AccessLogSyslogConfig>) => onChange({ ...value, ...patch });
@@ -44,12 +44,12 @@ export default function AccessLogSyslog({
       )}
       {value.enabled && (
         <>
-          {!localLogEnabled && (
+          {!logLevelEnabled && (
             <Alert
               className="mb-12 hint-alert"
               type="error"
               showIcon
-              title={t('pages.xray.syslog.localLogRequired')}
+              title={t('pages.xray.syslog.logLevelRequired')}
             />
           )}
           <SettingListItem

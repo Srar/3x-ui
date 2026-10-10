@@ -2143,7 +2143,7 @@ export const sections: readonly Section[] = [
             name: 'accessLogSyslog',
             in: 'body (form)',
             type: 'string',
-            desc: 'JSON object: {"enabled":true,"protocol":"udp","host":"syslog.example.com","port":514}. Protocol is udp or tcp; port is 1–65535. Omit to preserve existing settings. Enabling requires a local access-log file and loglevel other than none.',
+            desc: 'JSON object: {"enabled":true,"protocol":"udp","host":"syslog.example.com","port":514}. Protocol is udp or tcp; port is 1–65535. Omit to preserve existing settings. Enabling requires loglevel other than none. Local access-log file output is optional.',
             optional: true,
           },
         ],

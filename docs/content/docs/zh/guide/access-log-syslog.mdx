@@ -3,11 +3,11 @@ title: 访问日志 syslog 投递
 description: 将 Xray 实时访问日志投递到远程 syslog 接收端。
 ---
 
-在 **Xray 设置 → 日志配置** 中启用访问日志文件，然后打开其下方的 **Syslog 投递**。开启后显示传输协议、接收服务器和端口。服务器可填写域名、IPv4 或 IPv6 地址，不包含端口或方括号；默认使用 UDP 和端口 514。
+在 **Xray 设置 → 日志配置** 中打开“访问日志”下方的 **Syslog 投递**。本地文件保存可独立选择 `./access.log` 或 `none`；选择 `none` 时仍可投递 syslog。开启后显示传输协议、接收服务器和端口。服务器可填写域名、IPv4 或 IPv6 地址，不包含端口或方括号；默认使用 UDP 和端口 514。
 
 本页统一保存所有配置。首次开启或关闭投递时，会重启正在运行的 Xray；仅修改协议、服务器或端口不会重启 Xray。关闭投递后隐藏配置项，已填写的值保留。日志等级不能为 `none`。
 
-访问事件经 Xray stdout 实时进入面板，分别写入原有本地文件并加入投递队列。投递不会读取历史 `access.log`。原有访问日志查看、每日清理及文件大小清理继续生效；syslog 只发送当前面板的 Xray 访问日志，DNS、错误日志和内部 API 调用不在投递范围。
+访问事件经 Xray stdout 实时进入面板，加入投递队列，并在启用本地文件保存时写入该文件。投递不会读取历史 `access.log`。启用本地保存时，原有访问日志查看、每日清理及文件大小清理继续生效；syslog 只发送当前面板的 Xray 访问日志，DNS、错误日志和内部 API 调用不在投递范围。
 
 消息使用 RFC 5424，facility/severity 为 `local0/info`，应用名 `3x-ui`，消息标识 `access`。TCP 接收端需支持 RFC 6587 字节长度分帧。正文为 JSON，字段为 `DateTime`（UTC）、`FromAddress`、`ToAddress`、`Inbound`、`Outbound`、`Email`、`Raw`。缺失时间为 `null`，缺失字符串为空，沿用 Xray 的日志脱敏设置。
 

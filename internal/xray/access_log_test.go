@@ -129,6 +129,15 @@ func TestParseAccessEntryMissingAndRejected(t *testing.T) {
 
 // This uses the same optional binary convention as the other Xray API tests.
 func TestAccessOutputLiveXray(t *testing.T) {
+	for _, mode := range []struct {
+		name      string
+		localFile bool
+	}{{"local-file-and-syslog", true}, {"syslog-only", false}} {
+		t.Run(mode.name, func(t *testing.T) { testAccessOutputLiveXray(t, mode.localFile) })
+	}
+}
+
+func testAccessOutputLiveXray(t *testing.T, localFile bool) {
 	binary := os.Getenv("XRAY_E2E_BINARY")
 	if binary == "" {
 		t.Skip("set XRAY_E2E_BINARY to run live access-log delivery")
@@ -156,8 +165,17 @@ func TestAccessOutputLiveXray(t *testing.T) {
 	}()
 	port := freePort(t)
 	dir := t.TempDir()
+	t.Chdir(dir)
 	logPath := filepath.Join(dir, "access.log")
-	cfg := &Config{AccessLogCapture: true, LogConfig: json_util.RawMessage(`{"access":"` + filepath.ToSlash(logPath) + `","loglevel":"warning"}`)}
+	localPath := logPath
+	if !localFile {
+		localPath = "none"
+	}
+	logConfig, err := json.Marshal(map[string]any{"access": localPath, "loglevel": "warning"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := &Config{AccessLogCapture: true, LogConfig: json_util.RawMessage(logConfig)}
 	inbound, _ := json.Marshal([]map[string]any{{"listen": "127.0.0.1", "port": port, "protocol": "tunnel", "tag": "in", "settings": map[string]any{"rewriteAddress": "127.0.0.1", "rewritePort": target.Addr().(*net.TCPAddr).Port, "allowedNetwork": "tcp"}}})
 	outbound := json_util.RawMessage(`[{"protocol":"freedom","tag":"out"}]`)
 	// Config's inbound type is already the shape consumed by the process.
@@ -173,7 +191,7 @@ func TestAccessOutputLiveXray(t *testing.T) {
 	if err = os.WriteFile(path, data, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	writer := &accessOutput{path: logPath, diagnostics: NewLogWriter()}
+	writer := &accessOutput{path: cfg.accessFile(), diagnostics: NewLogWriter()}
 	cmd := exec.Command(binary, "-c", path)
 	cmd.Stdout = writer
 	cmd.Stderr = NewLogWriter()
@@ -204,16 +222,30 @@ func TestAccessOutputLiveXray(t *testing.T) {
 	if entry.Inbound != "in" || entry.Outbound != "out" || !strings.Contains(entry.ToAddress, strconv.Itoa(target.Addr().(*net.TCPAddr).Port)) {
 		t.Fatalf("unexpected live event: %+v", entry)
 	}
-	deadline := time.Now().Add(time.Second)
-	for {
-		local, err := os.ReadFile(logPath)
-		if err == nil && strings.Contains(string(local), entry.Raw) {
-			break
+	if localFile {
+		deadline := time.Now().Add(time.Second)
+		for {
+			local, err := os.ReadFile(logPath)
+			if err == nil && strings.Contains(string(local), entry.Raw) {
+				break
+			}
+			if time.Now().After(deadline) {
+				t.Fatalf("live record not in local log: %s, %v", local, err)
+			}
+			time.Sleep(10 * time.Millisecond)
 		}
-		if time.Now().After(deadline) {
-			t.Fatalf("live record not in local log: %s, %v", local, err)
+	} else {
+		writer.mu.Lock()
+		fileWarning := !writer.lastFileWarning.IsZero()
+		writer.mu.Unlock()
+		if fileWarning {
+			t.Fatal("disabled local file caused a write warning")
 		}
-		time.Sleep(10 * time.Millisecond)
+		for _, path := range []string{logPath, "none"} {
+			if _, err := os.Stat(path); !os.IsNotExist(err) {
+				t.Fatalf("syslog-only mode created %s: %v", path, err)
+			}
+		}
 	}
 	// Rebinding the sender models a panel-only restart while Xray and its writer
 	// continue running; the next event must go to the replacement destination.
@@ -260,5 +292,33 @@ func TestAccessOutputDeliversWhenLocalFileFails(t *testing.T) {
 	}
 	if entry.Raw != liveAccess {
 		t.Fatalf("wrong record: %+v", entry)
+	}
+}
+
+func TestCaptureConfigWithoutLocalFile(t *testing.T) {
+	for _, log := range []json_util.RawMessage{nil, json_util.RawMessage(`null`), json_util.RawMessage(`{}`), json_util.RawMessage(`{"access":"none","loglevel":"warning"}`), json_util.RawMessage(`{"access":""}`)} {
+		cfg := &Config{AccessLogCapture: true, LogConfig: log}
+		data, err := cfg.runtimeJSON()
+		if err != nil {
+			t.Fatal(err)
+		}
+		var runtime struct {
+			Log struct {
+				Access string `json:"access"`
+			} `json:"log"`
+		}
+		if err := json.Unmarshal(data, &runtime); err != nil {
+			t.Fatal(err)
+		}
+		if runtime.Log.Access != "" || cfg.accessFile() != "none" {
+			t.Fatalf("unexpected syslog-only config: %s", data)
+		}
+	}
+	old := capturedAccessLogPath()
+	defer setCapturePath(old)
+	setCapturePath("none")
+	path, err := GetAccessLogPath()
+	if err != nil || path != "none" {
+		t.Fatalf("local access logs still enabled: %q %v", path, err)
 	}
 }
