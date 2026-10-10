@@ -13460,7 +13460,7 @@
         "tags": [
           "Xray Settings"
         ],
-        "summary": "Return the Xray config template (JSON string), available inbound tags, client reverse tags, and the configured outbound test URL in one response.",
+        "summary": "Return the Xray config template, inbound and reverse tags, outbound test URL, and accessLogSyslog configuration in a JSON-encoded response.",
         "operationId": "post_panel_api_xray",
         "responses": {
           "200": {
@@ -13481,12 +13481,7 @@
                 },
                 "example": {
                   "success": true,
-                  "obj": {
-                    "xraySetting": "{...raw xray config...}",
-                    "inboundTags": "[\"in-443-tcp\"]",
-                    "clientReverseTags": "[]",
-                    "outboundTestUrl": "https://www.google.com/generate_204"
-                  }
+                  "obj": "{\"xraySetting\":{\"log\":{\"access\":\"./access.log\",\"loglevel\":\"warning\"}},\"inboundTags\":[\"in-443-tcp\"],\"clientReverseTags\":[],\"outboundTestUrl\":\"https://www.google.com/generate_204\",\"accessLogSyslog\":{\"enabled\":false,\"protocol\":\"udp\",\"host\":\"\",\"port\":514}}"
                 }
               }
             }
@@ -13589,7 +13584,7 @@
         "tags": [
           "Xray Settings"
         ],
-        "summary": "Save the Xray JSON config template and optionally the outbound test URL. Both are sent as form fields.",
+        "summary": "Atomically save the Xray JSON template, outbound test URL and optional access-log syslog configuration. Switching syslog on or off restarts a running Xray; changing its destination applies without a restart.",
         "operationId": "post_panel_api_xray_update",
         "requestBody": {
           "required": true,
@@ -13605,6 +13600,10 @@
                   "outboundTestUrl": {
                     "type": "string",
                     "description": "URL used for outbound reachability tests. Defaults to https://www.google.com/generate_204."
+                  },
+                  "accessLogSyslog": {
+                    "type": "string",
+                    "description": "JSON object: {\"enabled\":true,\"protocol\":\"udp\",\"host\":\"syslog.example.com\",\"port\":514}. Protocol is udp or tcp; port is 1–65535. Omit to preserve existing settings. Enabling requires a local access-log file and loglevel other than none."
                   }
                 },
                 "required": [

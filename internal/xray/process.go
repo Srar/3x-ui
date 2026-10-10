@@ -90,6 +90,9 @@ func getLogPath(key string) (string, error) {
 
 // GetAccessLogPath reads the Xray config and returns the access log file path.
 func GetAccessLogPath() (string, error) {
+	if path := capturedAccessLogPath(); path != "" {
+		return path, nil
+	}
 	return getLogPath("access")
 }
 
@@ -243,6 +246,12 @@ func newProcess(config *Config) *process {
 func newTestProcess(config *Config, configPath string) *process {
 	p := newProcess(config)
 	p.configPath = configPath
+	// Diagnostic test processes must not capture or publish access events.
+	if config != nil {
+		clone := *config
+		clone.AccessLogCapture = false
+		p.config = &clone
+	}
 	return p
 }
 
@@ -320,7 +329,7 @@ func (p *Process) SetConfig(config *Config) {
 // keeping it in step after a hot apply (Start only writes it on a cold start).
 func (p *Process) PersistConfig() error {
 	p.mu.RLock()
-	data, err := json.MarshalIndent(p.config, "", "  ")
+	data, err := p.config.runtimeJSON()
 	path := p.configPath
 	p.mu.RUnlock()
 	if err != nil {
@@ -619,7 +628,7 @@ func (p *process) Start() (err error) {
 		}
 	}()
 
-	data, err := json.MarshalIndent(p.config, "", "  ")
+	data, err := p.config.runtimeJSON()
 	if err != nil {
 		return common.NewErrorf("Failed to generate XRAY configuration files: %v", err)
 	}
@@ -641,6 +650,14 @@ func (p *process) Start() (err error) {
 	cmd := exec.CommandContext(context.Background(), GetBinaryPath(), "-c", configPath)
 	cmd.Stdout = p.logWriter
 	cmd.Stderr = p.logWriter
+	if p.configPath == "" {
+		path := ""
+		if p.config.AccessLogCapture {
+			path = p.config.accessFile()
+			cmd.Stdout = &accessOutput{path: path, diagnostics: p.logWriter}
+		}
+		setCapturePath(path)
+	}
 
 	err = p.startCommand(cmd)
 	if err != nil {

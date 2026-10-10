@@ -53,6 +53,7 @@ const (
 )
 
 var defaultValueMap = map[string]string{
+	"accessLogSyslog":    `{"enabled":false,"protocol":"udp","host":"","port":514}`,
 	"xrayTemplateConfig": xrayTemplateConfig,
 	"webListen":          "",
 	"webDomain":          "",

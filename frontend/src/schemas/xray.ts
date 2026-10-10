@@ -45,9 +45,45 @@ export const XraySettingsValueSchema = z
   })
   .loose();
 
+export const AccessLogSyslogSchema = z
+  .object({
+    enabled: z.boolean(),
+    protocol: z.enum(['udp', 'tcp']),
+    host: z.string(),
+    port: z.number().int(),
+  })
+  .superRefine((config, ctx) => {
+    if (!config.enabled) return;
+    const host = config.host.trim();
+    if (!host)
+      ctx.addIssue({ code: 'custom', path: ['host'], message: 'pages.xray.syslog.hostRequired' });
+    else {
+      let invalid = /[\s/[\]]/.test(host);
+      if (host.includes(':')) {
+        try {
+          new URL(`http://[${host}]/`);
+        } catch {
+          invalid = true;
+        }
+      }
+      if (invalid)
+        ctx.addIssue({ code: 'custom', path: ['host'], message: 'pages.xray.syslog.invalidHost' });
+    }
+    if (config.port < 1 || config.port > 65535)
+      ctx.addIssue({ code: 'custom', path: ['port'], message: 'pages.xray.syslog.invalidPort' });
+  });
+export type AccessLogSyslogConfig = z.infer<typeof AccessLogSyslogSchema>;
+export const DEFAULT_ACCESS_LOG_SYSLOG: AccessLogSyslogConfig = {
+  enabled: false,
+  protocol: 'udp',
+  host: '',
+  port: 514,
+};
+
 export const XrayConfigPayloadSchema = z
   .object({
     xraySetting: XraySettingsValueSchema,
+    accessLogSyslog: AccessLogSyslogSchema.optional(),
     inboundTags: z.array(z.string()).optional(),
     clientReverseTags: z.array(z.string()).optional(),
     outboundTestUrl: z.string().optional(),

@@ -17,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mhsanaei/3x-ui/v3/internal/accesslog"
 	"github.com/mhsanaei/3x-ui/v3/internal/amneziawgnet"
 	"github.com/mhsanaei/3x-ui/v3/internal/config"
 	"github.com/mhsanaei/3x-ui/v3/internal/eventbus"
@@ -549,6 +550,11 @@ func (s *Server) start(restartXray bool, startTgBot bool) (err error) {
 		return err
 	}
 	service.StartTrafficWriter()
+	syslogConfig, err := s.settingService.GetAccessLogSyslog()
+	if err != nil {
+		return err
+	}
+	accesslog.Configure(syslogConfig)
 
 	// SkipIfStillRunning stops a slow job (e.g. the 5s traffic poll on a large
 	// install) from overlapping itself: two concurrent runs of the same job race
@@ -816,6 +822,7 @@ func (s *Server) stop(stopXray bool, stopTgBot bool) error {
 			err2 = common.Combine(err2, err)
 		}
 	}
+	accesslog.Stop()
 	if s.bus != nil {
 		s.bus.Stop()
 	}

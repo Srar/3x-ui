@@ -25,7 +25,22 @@ const (
 	unencryptedOutboundMinimumVersion  = "26.7.11"
 )
 
-func (s *XraySettingService) SaveXraySetting(newXraySettings string) error {
+func (s *XraySettingService) SaveXraySetting(template string) error {
+	prepared, err := s.prepareXraySetting(template)
+	if err != nil {
+		return err
+	}
+	c, err := s.GetAccessLogSyslog()
+	if err != nil {
+		return err
+	}
+	if err = validateAccessLogSyslogTemplate(prepared, c); err != nil {
+		return err
+	}
+	return s.saveSetting("xrayTemplateConfig", prepared)
+}
+
+func (s *XraySettingService) prepareXraySetting(newXraySettings string) (string, error) {
 	// The frontend round-trips the whole getXraySetting response back
 	// through the textarea, so if it has ever received a wrapped
 	// payload (see UnwrapXrayTemplateConfig) it sends that same wrapper
@@ -33,7 +48,7 @@ func (s *XraySettingService) SaveXraySetting(newXraySettings string) error {
 	// garbage the next read can't recover from without this same call.
 	newXraySettings = UnwrapXrayTemplateConfig(newXraySettings)
 	if err := s.CheckXrayConfig(newXraySettings); err != nil {
-		return err
+		return "", err
 	}
 	if hoisted, err := EnsureStatsRouting(newXraySettings); err == nil {
 		newXraySettings = hoisted
@@ -44,7 +59,7 @@ func (s *XraySettingService) SaveXraySetting(newXraySettings string) error {
 	if spelled, changed, err := database.RewriteDNSOutboundQTypeZero(newXraySettings); err == nil && changed {
 		newXraySettings = spelled
 	}
-	return s.saveSetting("xrayTemplateConfig", newXraySettings)
+	return newXraySettings, nil
 }
 
 func (s *XraySettingService) CheckXrayConfig(XrayTemplateConfig string) error {

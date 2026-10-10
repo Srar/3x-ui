@@ -28,6 +28,49 @@ beforeEach(() => {
 });
 
 describe('useXraySetting', () => {
+  it('saves syslog with the Xray page and preserves edits across refetches', async () => {
+    let payload = xrayPayload();
+    const post = vi.spyOn(HttpUtil, 'post').mockImplementation(async (url, body) => {
+      if (url === '/panel/api/xray/') return new Msg(true, '', JSON.stringify(payload));
+      if (url === '/panel/api/xray/update') {
+        const data = body as Record<string, string>;
+        payload = xrayPayload({
+          xraySetting: JSON.parse(data.xraySetting),
+          accessLogSyslog: JSON.parse(data.accessLogSyslog),
+        });
+      }
+      return new Msg(true, '');
+    });
+    const queryClient = makeTestQueryClient();
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+    const { result } = renderHook(() => useXraySetting(), { wrapper });
+    await waitFor(() => expect(result.current.fetched).toBe(true));
+    expect(result.current.accessLogSyslog.enabled).toBe(false);
+    const config = {
+      enabled: true,
+      protocol: 'tcp' as const,
+      host: 'receiver.example',
+      port: 1514,
+    };
+    act(() => result.current.setAccessLogSyslog(config));
+    expect(result.current.saveDisabled).toBe(false);
+    expect(result.current.accessLogSyslogRestartRequired).toBe(true);
+    await act(async () => result.current.fetchAll());
+    expect(result.current.accessLogSyslog).toEqual(config);
+    await act(async () => result.current.saveAll());
+    expect(post).toHaveBeenCalledWith(
+      '/panel/api/xray/update',
+      expect.objectContaining({ accessLogSyslog: JSON.stringify(config) }),
+    );
+    await waitFor(() => expect(result.current.saveDisabled).toBe(true));
+    expect(result.current.accessLogSyslogRestartRequired).toBe(false);
+    act(() => result.current.setAccessLogSyslog({ ...config, host: 'other.example' }));
+    expect(result.current.accessLogSyslogRestartRequired).toBe(false);
+    expect(result.current.saveDisabled).toBe(false);
+  });
+
   it('refreshes server-derived outbounds while the editor is dirty', async () => {
     let payload = xrayPayload({ subscriptionOutbounds: [{ tag: 'before' }] });
     vi.spyOn(HttpUtil, 'post').mockImplementation(async (url) => {

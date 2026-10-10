@@ -177,6 +177,14 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 		return nil, err
 	}
 	xrayConfig.LogConfig = resolveXrayLogPaths(xrayConfig.LogConfig)
+	syslogConfig, err := s.settingService.GetAccessLogSyslog()
+	if err != nil {
+		return nil, err
+	}
+	if err = validateAccessLogSyslogTemplate(templateConfig, syslogConfig); err != nil {
+		return nil, err
+	}
+	xrayConfig.AccessLogCapture = syslogConfig.Enabled
 	xrayConfig.API = ensureAPIServices(xrayConfig.API)
 	xrayConfig.Policy = ensureStatsPolicy(xrayConfig.Policy)
 	xrayConfig.RouterConfig = stripDisabledRules(xrayConfig.RouterConfig)

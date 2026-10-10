@@ -17,6 +17,8 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { catTabLabel } from '@/pages/settings/catTabLabel';
 import type { XraySettingsValue, SetTemplate } from '@/hooks/useXraySetting';
 import './BasicsTab.css';
+import AccessLogSyslog from './AccessLogSyslog';
+import type { AccessLogSyslogConfig } from '@/schemas/xray';
 
 import {
   ACCESS_LOG,
@@ -34,6 +36,9 @@ import {
 } from './helpers';
 
 interface BasicsTabProps {
+  accessLogSyslog?: AccessLogSyslogConfig;
+  onChangeAccessLogSyslog?: (value: AccessLogSyslogConfig) => void;
+  accessLogSyslogRestartRequired?: boolean;
   templateSettings: XraySettingsValue | null;
   setTemplateSettings: SetTemplate;
   outboundTestUrl: string;
@@ -42,6 +47,9 @@ interface BasicsTabProps {
 }
 
 export default function BasicsTab({
+  accessLogSyslog,
+  onChangeAccessLogSyslog,
+  accessLogSyslogRestartRequired = false,
   templateSettings,
   setTemplateSettings,
   outboundTestUrl,
@@ -418,6 +426,19 @@ export default function BasicsTab({
               />
             }
           />
+          {accessLogSyslog && onChangeAccessLogSyslog && (
+            <AccessLogSyslog
+              value={accessLogSyslog}
+              onChange={onChangeAccessLogSyslog}
+              restartRequired={accessLogSyslogRestartRequired}
+              localLogEnabled={
+                typeof log.access === 'string' &&
+                log.access.trim() !== '' &&
+                log.access.toLowerCase() !== 'none' &&
+                log.loglevel !== 'none'
+              }
+            />
+          )}
           <SettingListItem
             title={t('pages.xray.errorLog')}
             description={t('pages.xray.errorLogDesc')}

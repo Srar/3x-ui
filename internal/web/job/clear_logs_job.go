@@ -103,6 +103,8 @@ func wipeXrayLogs() {
 }
 
 func truncateXrayLog(pathFn func() (string, error), maxBytes int64) {
+	xray.AccessLogFileMu.Lock()
+	defer xray.AccessLogFileMu.Unlock()
 	logPath, err := pathFn()
 	if err != nil || disabledLogPath(logPath) {
 		return

@@ -2086,9 +2086,21 @@ export const sections: readonly Section[] = [
         method: 'POST',
         path: '/panel/api/xray/',
         summary:
-          'Return the Xray config template (JSON string), available inbound tags, client reverse tags, and the configured outbound test URL in one response.',
-        response:
-          '{\n  "success": true,\n  "obj": {\n    "xraySetting": "{...raw xray config...}",\n    "inboundTags": "[\\"in-443-tcp\\"]",\n    "clientReverseTags": "[]",\n    "outboundTestUrl": "https://www.google.com/generate_204"\n  }\n}',
+          'Return the Xray config template, inbound and reverse tags, outbound test URL, and accessLogSyslog configuration in a JSON-encoded response.',
+        response: JSON.stringify(
+          {
+            success: true,
+            obj: JSON.stringify({
+              xraySetting: { log: { access: './access.log', loglevel: 'warning' } },
+              inboundTags: ['in-443-tcp'],
+              clientReverseTags: [],
+              outboundTestUrl: 'https://www.google.com/generate_204',
+              accessLogSyslog: { enabled: false, protocol: 'udp', host: '', port: 514 },
+            }),
+          },
+          null,
+          2,
+        ),
       },
       {
         method: 'GET',
@@ -2112,7 +2124,7 @@ export const sections: readonly Section[] = [
         method: 'POST',
         path: '/panel/api/xray/update',
         summary:
-          'Save the Xray JSON config template and optionally the outbound test URL. Both are sent as form fields.',
+          'Atomically save the Xray JSON template, outbound test URL and optional access-log syslog configuration. Switching syslog on or off restarts a running Xray; changing its destination applies without a restart.',
         params: [
           {
             name: 'xraySetting',
@@ -2125,6 +2137,13 @@ export const sections: readonly Section[] = [
             in: 'body (form)',
             type: 'string',
             desc: 'URL used for outbound reachability tests. Defaults to https://www.google.com/generate_204.',
+            optional: true,
+          },
+          {
+            name: 'accessLogSyslog',
+            in: 'body (form)',
+            type: 'string',
+            desc: 'JSON object: {"enabled":true,"protocol":"udp","host":"syslog.example.com","port":514}. Protocol is udp or tcp; port is 1–65535. Omit to preserve existing settings. Enabling requires a local access-log file and loglevel other than none.',
             optional: true,
           },
         ],

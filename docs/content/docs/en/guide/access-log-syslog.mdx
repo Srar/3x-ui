@@ -1,0 +1,22 @@
+---
+title: Access-log syslog delivery
+description: Forward live Xray access logs to a remote syslog receiver.
+---
+
+In **Xray Settings → Log Configs**, enable a local access-log file, then turn on **Syslog delivery** beneath it. The switch reveals three fields: transport protocol, receiver host, and port. Enter a hostname, IPv4 or IPv6 address without a port or brackets. Defaults are UDP and port 514; Xray log level must not be `none`.
+
+Use the page's existing Save button. Switching delivery on or off restarts a running Xray. Changing the destination does not restart it. A manually stopped Xray stays stopped. Turning delivery off hides the fields and retains their values.
+
+The panel receives live access records from Xray stdout and distributes them to the configured local file and an independent syslog queue. It does not read or replay `access.log`. Existing log viewing, daily truncation and size cleanup continue. Only local Xray access events are forwarded; DNS logs, diagnostics and internal API calls are excluded. Xray address masking also applies to forwarded records.
+
+Messages use RFC 5424 with `local0/info`, app name `3x-ui` and message ID `access`. TCP receivers must accept RFC 6587 octet-counted framing. JSON fields are `DateTime` (UTC), `FromAddress`, `ToAddress`, `Inbound`, `Outbound`, `Email` and `Raw`. Missing timestamps are `null`; missing strings are empty.
+
+Delivery reconnects automatically. The memory queue holds at most 4096 messages and 32 MiB, dropping new records when full. Encoded messages larger than 60 KiB are skipped. Changing the destination discards the previous queue. Shutdown allows up to three seconds to drain it. Failures and drops appear in panel logs. Delivery is best effort: UDP has no receipt acknowledgment and TCP writes do not confirm receiver persistence. Loss or duplicates are possible. There is no historical replay, persistent queue or TLS.
+
+`/panel/api/xray/` returns an independent `accessLogSyslog` object. `/panel/api/xray/update` accepts a JSON-encoded form field of the same name:
+
+```json
+{"enabled":true,"protocol":"tcp","host":"syslog.example.com","port":514}
+```
+
+The configuration is stored in panel settings, outside the Xray JSON template. Older clients that omit the field preserve the saved configuration.

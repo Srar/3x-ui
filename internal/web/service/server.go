@@ -32,6 +32,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/mhsanaei/3x-ui/v3/internal/accesslog"
 	"github.com/mhsanaei/3x-ui/v3/internal/amneziawg"
 	"github.com/mhsanaei/3x-ui/v3/internal/amneziawgnet"
 	"github.com/mhsanaei/3x-ui/v3/internal/config"
@@ -1245,32 +1246,11 @@ func (s *ServerService) GetLogs(count string, level string, syslog string) []str
 // the log verbatim) and may be truncated, so every positional lookup is length
 // guarded: a malformed line yields a partial entry rather than panicking.
 func parseAccessLogFields(line string) LogEntry {
-	var entry LogEntry
-	parts := strings.Fields(line)
-
-	for i, part := range parts {
-
-		if i == 0 && len(parts) > 1 {
-			dateTime, err := time.ParseInLocation("2006/01/02 15:04:05.999999", parts[0]+" "+parts[1], time.Local)
-			if err != nil {
-				continue
-			}
-			entry.DateTime = dateTime.UTC()
-		}
-
-		if part == "from" && i+1 < len(parts) {
-			entry.FromAddress = strings.TrimLeft(parts[i+1], "/")
-		} else if part == "accepted" && i+1 < len(parts) {
-			entry.ToAddress = strings.TrimLeft(parts[i+1], "/")
-		} else if strings.HasPrefix(part, "[") {
-			entry.Inbound = part[1:]
-		} else if strings.HasSuffix(part, "]") {
-			entry.Outbound = part[:len(part)-1]
-		} else if part == "email:" && i+1 < len(parts) {
-			entry.Email = parts[i+1]
-		}
+	parsed := accesslog.Parse(line)
+	entry := LogEntry{FromAddress: parsed.FromAddress, ToAddress: parsed.ToAddress, Inbound: parsed.Inbound, Outbound: parsed.Outbound, Email: parsed.Email}
+	if parsed.DateTime != nil {
+		entry.DateTime = *parsed.DateTime
 	}
-
 	return entry
 }
 

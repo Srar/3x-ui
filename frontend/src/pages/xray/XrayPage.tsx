@@ -22,6 +22,7 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useXraySetting } from '@/hooks/useXraySetting';
 import type { XraySettingsValue } from '@/hooks/useXraySetting';
 import AppSidebar from '@/layouts/AppSidebar';
+import { AccessLogSyslogSchema } from '@/schemas/xray';
 import { JsonEditor } from '@/components/form';
 import { setMessageInstance } from '@/utils/messageBus';
 
@@ -192,6 +193,23 @@ export default function XrayPage() {
   }
 
   function onSaveAll() {
+    const validated = AccessLogSyslogSchema.safeParse(xs.accessLogSyslog);
+    if (!validated.success) {
+      messageApi.error(t(validated.error.issues[0].message));
+      return;
+    }
+    if (xs.accessLogSyslog.enabled) {
+      const log = templateSettings?.log;
+      if (
+        typeof log?.access !== 'string' ||
+        !log.access.trim() ||
+        log.access.trim().toLowerCase() === 'none' ||
+        String(log.loglevel).trim().toLowerCase() === 'none'
+      ) {
+        messageApi.error(t('pages.xray.syslog.localLogRequired'));
+        return;
+      }
+    }
     try {
       JSON.parse(xraySetting);
     } catch (e) {
@@ -300,6 +318,9 @@ export default function XrayPage() {
       default:
         return (
           <BasicsTab
+            accessLogSyslog={xs.accessLogSyslog}
+            onChangeAccessLogSyslog={xs.setAccessLogSyslog}
+            accessLogSyslogRestartRequired={xs.accessLogSyslogRestartRequired}
             templateSettings={templateSettings}
             setTemplateSettings={setTemplateSettings}
             outboundTestUrl={outboundTestUrl}

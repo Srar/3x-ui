@@ -16,6 +16,7 @@ import (
 	"github.com/mhsanaei/3x-ui/v3/internal/xray"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mhsanaei/3x-ui/v3/internal/accesslog"
 )
 
 // XraySettingController handles Xray configuration and settings operations.
@@ -111,7 +112,13 @@ func (a *XraySettingController) getXraySetting(c *gin.Context) {
 	if outboundTestUrl == "" {
 		outboundTestUrl = "https://www.google.com/generate_204"
 	}
+	syslogConfig, err := a.SettingService.GetAccessLogSyslog()
+	if err != nil {
+		jsonMsg(c, I18nWeb(c, "pages.settings.toasts.getSettings"), err)
+		return
+	}
 	xrayResponse := map[string]any{
+		"accessLogSyslog":   syslogConfig,
 		"xraySetting":       json.RawMessage(xraySetting),
 		"inboundTags":       json.RawMessage(inboundTags),
 		"clientReverseTags": json.RawMessage(clientReverseTags),
@@ -141,19 +148,21 @@ func (a *XraySettingController) getXraySetting(c *gin.Context) {
 // the running core right away — through the gRPC API when only inbounds,
 // outbounds or routing rules changed, with a process restart otherwise.
 func (a *XraySettingController) updateSetting(c *gin.Context) {
-	xraySetting := c.PostForm("xraySetting")
-	if err := a.XraySettingService.SaveXraySetting(xraySetting); err != nil {
+	var supplied *accesslog.Config
+	if raw, present := c.GetPostForm("accessLogSyslog"); present {
+		config := accesslog.DefaultConfig()
+		if err := json.Unmarshal([]byte(raw), &config); err != nil {
+			jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), err)
+			return
+		}
+		supplied = &config
+	}
+	config, err := a.XraySettingService.SaveXraySettings(c.PostForm("xraySetting"), c.PostForm("outboundTestUrl"), supplied)
+	if err != nil {
 		jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), err)
 		return
 	}
-	outboundTestUrl := c.PostForm("outboundTestUrl")
-	if outboundTestUrl == "" {
-		outboundTestUrl = "https://www.google.com/generate_204"
-	}
-	if err := a.SettingService.SetXrayOutboundTestUrl(outboundTestUrl); err != nil {
-		jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), err)
-		return
-	}
+	accesslog.Configure(config)
 	// Only reconcile a running core; a manually stopped xray stays stopped.
 	if a.XrayService.IsXrayRunning() {
 		if err := a.XrayService.RestartXray(false); err != nil {

@@ -7,6 +7,8 @@ import { parseMsg } from '@/utils/zodValidate';
 import { keys } from '@/api/queryKeys';
 import { isOutboundProtocol } from '@/schemas/primitives';
 import {
+  DEFAULT_ACCESS_LOG_SYSLOG,
+  type AccessLogSyslogConfig,
   OutboundTrafficListSchema,
   OutboundTestResultListSchema,
   XrayConfigPayloadSchema,
@@ -72,6 +74,9 @@ export interface UseXraySettingResult {
   setXraySetting: (next: string) => void;
   templateSettings: XraySettingsValue | null;
   setTemplateSettings: SetTemplate;
+  accessLogSyslog: AccessLogSyslogConfig;
+  setAccessLogSyslog: (value: AccessLogSyslogConfig) => void;
+  accessLogSyslogRestartRequired: boolean;
   outboundTestUrl: string;
   setOutboundTestUrl: (v: string) => void;
   inboundTags: string[];
@@ -146,6 +151,9 @@ export function useXraySetting(): UseXraySettingResult {
     staleTime: Infinity,
   });
 
+  const [accessLogSyslog, setAccessLogSyslog] = useState(DEFAULT_ACCESS_LOG_SYSLOG);
+  const [savedAccessLogSyslog, setSavedAccessLogSyslog] = useState(DEFAULT_ACCESS_LOG_SYSLOG);
+  const accessLogSyslogRef = useRef(accessLogSyslog);
   const [xraySetting, setXraySettingState] = useState('');
   const [templateSettings, setTemplateSettingsState] = useState<XraySettingsValue | null>(null);
   const [outboundTestUrl, setOutboundTestUrlState] = useState(DEFAULT_TEST_URL);
@@ -180,6 +188,7 @@ export function useXraySetting(): UseXraySettingResult {
   const [syncedConfig, setSyncedConfig] = useState<XrayConfigPayload | undefined>();
 
   useEffect(() => {
+    accessLogSyslogRef.current = accessLogSyslog;
     xraySettingRef.current = xraySetting;
     outboundTestUrlRef.current = outboundTestUrl;
     savedXraySettingRef.current = savedXraySetting;
@@ -193,6 +202,7 @@ export function useXraySetting(): UseXraySettingResult {
   if (config && config !== syncedConfig) {
     setSyncedConfig(config);
     const isDirty =
+      JSON.stringify(savedAccessLogSyslog) !== JSON.stringify(accessLogSyslog) ||
       savedXraySetting !== xraySetting ||
       savedOutboundTestUrl !== normalizeOutboundTestUrl(outboundTestUrl);
     if (!isDirty) {
@@ -203,6 +213,9 @@ export function useXraySetting(): UseXraySettingResult {
       setSavedXraySetting(pretty);
       setOutboundTestUrlState(nextUrl);
       setSavedOutboundTestUrl(nextUrl);
+      const nextSyslog = config.accessLogSyslog ?? DEFAULT_ACCESS_LOG_SYSLOG;
+      setAccessLogSyslog(nextSyslog);
+      setSavedAccessLogSyslog(nextSyslog);
     }
   }
 
@@ -252,16 +265,31 @@ export function useXraySetting(): UseXraySettingResult {
 
   const saveMut = useMutation({
     mutationFn: async () => {
+      const sentSyslog = {
+        ...accessLogSyslogRef.current,
+        host: accessLogSyslogRef.current.host.trim(),
+      };
       const sentXraySetting = xraySettingRef.current;
       const sentTestUrl = normalizeOutboundTestUrl(outboundTestUrlRef.current);
       const msg = await HttpUtil.post('/panel/api/xray/update', {
         xraySetting: sentXraySetting,
         outboundTestUrl: sentTestUrl,
+        accessLogSyslog: JSON.stringify(sentSyslog),
       });
-      return { msg, sentXraySetting, sentTestUrl };
+      return { msg, sentXraySetting, sentTestUrl, sentSyslog };
     },
-    onSuccess: ({ msg, sentXraySetting, sentTestUrl }) => {
+    onSuccess: ({ msg, sentXraySetting, sentTestUrl, sentSyslog }) => {
       if (!msg?.success) return;
+      setSavedAccessLogSyslog(sentSyslog);
+      // Preserve edits made while the save was in flight.
+      setAccessLogSyslog((current) =>
+        current.host.trim() === sentSyslog.host &&
+        current.enabled === sentSyslog.enabled &&
+        current.protocol === sentSyslog.protocol &&
+        current.port === sentSyslog.port
+          ? sentSyslog
+          : current,
+      );
       setSavedXraySetting(sentXraySetting);
       setSavedOutboundTestUrl(sentTestUrl);
       queryClient.invalidateQueries({ queryKey: keys.xray.config() });
@@ -492,7 +520,9 @@ export function useXraySetting(): UseXraySettingResult {
     [testingAll, testOutbound, testSubscriptionOutbound, postOutboundTestBatch],
   );
 
+  const accessLogSyslogRestartRequired = savedAccessLogSyslog.enabled !== accessLogSyslog.enabled;
   const saveDisabled =
+    JSON.stringify(savedAccessLogSyslog) === JSON.stringify(accessLogSyslog) &&
     savedXraySetting === xraySetting &&
     savedOutboundTestUrl === normalizeOutboundTestUrl(outboundTestUrl);
 
@@ -508,6 +538,9 @@ export function useXraySetting(): UseXraySettingResult {
       setXraySetting,
       templateSettings,
       setTemplateSettings,
+      accessLogSyslog,
+      setAccessLogSyslog,
+      accessLogSyslogRestartRequired,
       outboundTestUrl,
       setOutboundTestUrl,
       inboundTags,
@@ -536,6 +569,9 @@ export function useXraySetting(): UseXraySettingResult {
       setXraySetting,
       templateSettings,
       setTemplateSettings,
+      accessLogSyslog,
+      setAccessLogSyslog,
+      accessLogSyslogRestartRequired,
       outboundTestUrl,
       setOutboundTestUrl,
       inboundTags,

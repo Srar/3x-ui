@@ -70,7 +70,7 @@ func (d *HotDiff) Empty() bool {
 // the change touches anything that has no runtime reload API (log, dns,
 // policy, ...) and therefore requires a full process restart.
 func ComputeHotDiff(oldCfg, newCfg *Config) (*HotDiff, bool) {
-	if oldCfg == nil || newCfg == nil {
+	if oldCfg == nil || newCfg == nil || oldCfg.AccessLogCapture != newCfg.AccessLogCapture {
 		return nil, false
 	}
 
