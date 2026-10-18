@@ -505,6 +505,8 @@
         "mtprotoFakeTlsDomainHint": "Домен FakeTLS за замовчуванням для генерації секрету нового клієнта. Кожен клієнт може використовувати власний домен.",
         "mtgThrottleMaxConnections": "Макс. з'єднань",
         "mtgThrottleMaxConnectionsHint": "Обмеження одночасних з'єднань усіх користувачів зі справедливим розподілом. 0 — вимкнено.",
+        "mtgPendingHandshakesMaxPerIp": "Макс. незавершених рукостискань на IP",
+        "mtgPendingHandshakesMaxPerIpHint": "Нові з'єднання з IP, що вже має стільки незавершених рукостискань, закриваються. Клієнти за спільним IP (NAT оператора) ділять цей ліміт. 0 — вимкнено.",
         "mtgAdTagInvalid": "Рекламний тег має містити рівно 32 шістнадцяткові символи.",
         "mtgPublicIpv4": "Публічний IPv4",
         "mtgPublicIpv6": "Публічний IPv6",
@@ -694,7 +696,41 @@
           "listen": "Адреса прослуховування inbound",
           "custom": "Користувацька"
         },
-        "autoFill": "Автозаповнення"
+        "autoFill": "Автозаповнення",
+        "xdrive": {
+          "service": "Сервіс сховища",
+          "serviceLocal": "Локальна тека",
+          "serviceTemplate": "Власний шаблон",
+          "remoteFolder": "Віддалена тека",
+          "clientId": "Client ID",
+          "clientSecret": "Client Secret",
+          "refreshToken": "Refresh Token",
+          "secrets": "Секрети",
+          "secretsDesc": "Значення, які шаблон читає як {secret0}, {secret1}, …",
+          "template": "Шаблон сховища",
+          "templateInvalid": "Має бути об'єкт JSON",
+          "front": "Адреса фронтингу",
+          "frontDesc": "Необов'язковий хост або IP для підключення до API сховища (domain fronting).",
+          "frontPort": "Порт фронтингу",
+          "segmentBytes": "Розмір сегмента (байт)",
+          "flushInterval": "Інтервал надсилання (мс)",
+          "pollInterval": "Інтервал опитування (мс)",
+          "maxPollInterval": "Макс. інтервал опитування (мс)",
+          "eagerWindow": "Вікно випередження (мс)",
+          "holeTimeout": "Тайм-аут пропущеного сегмента (мс)",
+          "sessionTtl": "TTL сесії (с)",
+          "concurrency": "Паралельність"
+        },
+        "masque": {
+          "addressPool": "Пул адрес",
+          "addressPoolDesc": "Адреси тунелів видаються з цих префіксів — не більше одного IPv4 та одного IPv6."
+        },
+        "tunDesc": "Тип адаптера",
+        "tunDescTooltip": "Лише Windows: тип тунелю, з яким створюється новий адаптер Wintun. Порожньо — Wintun.",
+        "autoSystemDnsToGateway": "Системний DNS на шлюз",
+        "autoSystemDnsToGatewayTooltip": "Лише Linux: спрямовує systemd-resolved на шлюз TUN, щоб системні запити йшли через Xray. Потрібен шлюз; у разі помилки TUN не запуститься.",
+        "autoSystemWfpBlockLeak": "Блокування витоків (WFP)",
+        "autoSystemWfpBlockLeakTooltip": "Лише Windows, разом з авто-маршрутами системи: dns утримує DNS усередині TUN (потрібні DNS-сервери), misconfigtun блокує версію IP, яку жоден маршрут не веде в TUN."
       },
       "info": {
         "mode": "Режим",
@@ -789,7 +825,7 @@
       "limitIpFail2banWindows": "Fail2ban недоступний у Windows, тому обмеження за IP не може бути застосоване.",
       "limitIpDisabled": "Функцію обмеження за IP вимкнено на цьому сервері.",
       "password": "Пароль",
-      "passwordDesc": "Використовується лише клієнтами Trojan і Shadowsocks; ігнорується для VLESS, VMess, Hysteria та WireGuard.",
+      "passwordDesc": "Використовується клієнтами Trojan, Shadowsocks, TUIC і MASQUE; ігнорується для VLESS, VMess, Hysteria та WireGuard.",
       "subId": "ID підписки",
       "subIdDesc": "Також слугує кодом запрошення цього клієнта в Telegram-боті: той, хто надішле його боту, буде прив'язаний до цього клієнта. Використовуйте довге випадкове значення — короткий або легко вгадуваний ID може привласнити хтось інший.",
       "online": "У мережі",
@@ -1389,6 +1425,15 @@
         "apiTokenName": "Назва",
         "apiTokenNamePlaceholder": "наприклад, central-panel-a",
         "apiTokenNameRequired": "Назва обов'язкова",
+        "apiTokenScope": "Область доступу",
+        "apiTokenScopeAdmin": "Адміністратор",
+        "apiTokenScopeAdminDesc": "Повний доступ до всіх API-методів панелі. Використовуйте лише для довіреної автоматизації.",
+        "apiTokenScopeMonitor": "Моніторинг",
+        "apiTokenScopeMonitorDesc": "Доступ лише для читання стану системи, версій і метрик.",
+        "apiTokenScopeNodeSync": "Синхронізація вузла",
+        "apiTokenScopeNodeSyncDesc": "Синхронізує конфігурацію вузла, вхідні, клієнтів, трафік і стан Xray. Не може оновлювати ПЗ панелі.",
+        "apiTokenScopeNodeAdmin": "Адміністратор вузла",
+        "apiTokenScopeNodeAdminDesc": "Включає права синхронізації вузла й також може запускати оновлення ПЗ панелі.",
         "apiTokenEmpty": "Поки немає токенів — створіть один для автентифікації ботів або віддалених панелей.",
         "apiTokenDeleteWarning": "Будь-який клієнт, що використовує цей токен, негайно втратить автентифікацію.",
         "apiTokenCreatedTitle": "Токен створено",
@@ -1809,6 +1854,19 @@
       "completeTemplate": "Усі",
       "logLevel": "Рівень журналу",
       "logLevelDesc": "Рівень журналу для журналів помилок із зазначенням інформації, яку потрібно записати.",
+      "syslog": {
+        "enable": "Syslog delivery",
+        "desc": "Send live access logs to a remote syslog receiver as JSON. Local file logging can be disabled independently.",
+        "restart": "Saving this switch change will restart Xray.",
+        "logLevelRequired": "Choose an Xray log level other than none before enabling syslog.",
+        "protocol": "Transport protocol",
+        "host": "Receiver host",
+        "hostDesc": "Hostname, IPv4 or IPv6 address, without a port.",
+        "port": "Receiver port",
+        "hostRequired": "Enter a syslog receiver host.",
+        "invalidHost": "Enter a hostname or IP address without spaces, brackets or a port.",
+        "invalidPort": "Enter a port between 1 and 65535."
+      },
       "accessLog": "Журнал доступу",
       "accessLogDesc": "Шлях до файлу журналу доступу. Спеціальне значення 'none' вимикає журнали доступу",
       "errorLog": "Журнал помилок",
@@ -1929,6 +1987,7 @@
         "serverNamePlaceholder": "ім'я сервера",
         "verifyPeerName": "Перевіряти ім'я peer",
         "pinnedSha256": "Pinned SHA256",
+        "useSystemCA": "Використовувати системні CA",
         "shortId": "Short ID",
         "sockopts": "Sockopts",
         "keepAliveInterval": "Інтервал keep alive",
@@ -1936,7 +1995,10 @@
         "interface": "Інтерфейс",
         "proxyProtocol": "Proxy protocol",
         "tcpUserTimeoutMs": "TCP user timeout (мс)",
-        "tcpKeepAliveIdleS": "TCP keep-alive idle (с)"
+        "tcpKeepAliveIdleS": "TCP keep-alive idle (с)",
+        "masqueWarpDesc": "Підключення до Cloudflare WARP через MASQUE із зареєстрованим ключем ECDSA P-256; host і path за замовчуванням вказують на кінцеву точку Cloudflare.",
+        "masqueWarpPublicKey": "Відкритий ключ кінцевої точки",
+        "masqueWarpAddress": "Адреси тунелю"
       },
       "outbound": {
         "tag": "Тег",
@@ -2197,7 +2259,9 @@
         "warpPlusData": "WARP+ data",
         "quota": "Квота",
         "usage": "Використання",
-        "addOutbound": "Додати вихідний"
+        "addOutbound": "Додати вихідний",
+        "masqueDesc": "Реєструє окремий пристрій WARP для MASQUE; реєстрація WireGuard вище не змінюється.",
+        "addMasqueOutbound": "Додати аутбаунд WARP через MASQUE"
       },
       "dns": {
         "enable": "Увімкнути DNS",
@@ -2241,7 +2305,11 @@
         "clearAll": "Видалити всі",
         "clearAllTitle": "Видалити всі DNS-сервери?",
         "clearAllConfirm": "Усі DNS-сервери буде видалено зі списку. Дію не можна скасувати.",
-        "dnsLeakWarning": "DNS може витікати через localhost, звичайний UDP/TCP, локальний режим DoH/DoQ, fallback-запити або EDNS client IP. Для приватності використовуйте маршрутизований DoH, фіксацію hosts і вимикайте fallback."
+        "dnsLeakWarning": "DNS може витікати через localhost, звичайний UDP/TCP, локальний режим DoH/DoQ, fallback-запити або EDNS client IP. Для приватності використовуйте маршрутизований DoH, фіксацію hosts і вимикайте fallback.",
+        "script": "Lua-скрипт",
+        "scriptDesc": "Шлях до файлу .lua з функцією HandleDNSQuery — абсолютний або відносно теки bin Xray. Скрипт відповідає на всі запити й звертається до серверів лише зі свого коду. Xray не запуститься, якщо файл відсутній або містить помилки.",
+        "serverId": "ID",
+        "serverIdDesc": "Ім'я, за яким DNS-скрипт на Lua вибирає цей сервер"
       },
       "fakedns": {
         "add": "Додати підроблений DNS",
@@ -2249,7 +2317,10 @@
         "poolSize": "Розмір пулу"
       },
       "defaultOutbound": "Вихідний за замовчуванням",
-      "defaultOutboundDesc": "Трафік без збігу з правилами маршрутизації йде через цей вихідний (перший у списку)."
+      "defaultOutboundDesc": "Трафік без збігу з правилами маршрутизації йде через цей вихідний (перший у списку).",
+      "routingScript": "Скрипт маршрутизації",
+      "routingScriptDesc": "Шлях до файлу .lua з функцією HandleRoute — абсолютний або відносно теки bin Xray. Скрипт обирає кожен маршрут, а Xray ігнорує всі правила маршрутизації, зокрема правило api панелі: спрямовуйте вхідний api на вихідний api, інакше зупиниться статистика трафіку й застосування змін клієнтів на льоту. Xray не запуститься, якщо файл відсутній або містить помилки.",
+      "routingScriptActive": "У розділі «{section}» задано скрипт маршрутизації, тому Xray ігнорує ці правила."
     },
     "hosts": {
       "addHost": "Додати хост",
@@ -2376,19 +2447,7 @@
       "tag": "Спонсор",
       "visit": "Перейти",
       "yourBrand": "Тут може бути ваш бренд",
-      "yourBrandText": "Покажіть свою компанію тисячам адміністраторів серверів, які щодня відкривають 3X-UI.",
-      "placements": "Доступні місця",
-      "placementDashboard": "Банер на головній",
-      "placementDashboardDesc": "Преміум-місце вгорі панелі, один спонсор за раз.",
-      "placementSidebar": "Картка в бічній панелі",
-      "placementSidebarDesc": "Показується на всіх сторінках панелі, спонсори чергуються.",
-      "placementLogin": "Сторінка входу",
-      "placementLoginDesc": "Адміністратор бачить її під час кожного входу.",
-      "placementPage": "Сторінка спонсорів",
-      "placementPageDesc": "Розміщення тут із логотипом, описом і посиланням.",
-      "available": "Вільно",
-      "takenUntil": "Зайнято до {date}",
-      "activeCount": "Активних: {count}"
+      "yourBrandText": "Покажіть свою компанію тисячам адміністраторів серверів, які щодня відкривають 3X-UI."
     }
   },
   "tgbot": {

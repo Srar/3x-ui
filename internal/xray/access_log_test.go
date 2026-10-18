@@ -40,6 +40,7 @@ func TestAccessOutputSplitLinesAndDNS(t *testing.T) {
 		t.Fatalf("wrong diagnostic output: %s", diagnostics.String())
 	}
 }
+
 func TestAccessOutputConcurrentCleanup(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "access.log")
 	w := &accessOutput{path: path, diagnostics: &bytes.Buffer{}}
@@ -70,6 +71,7 @@ func TestAccessOutputConcurrentCleanup(t *testing.T) {
 		}
 	}
 }
+
 func TestCaptureConfigRequiresRestartAndPreservesPath(t *testing.T) {
 	original := json_util.RawMessage(`{"access":"/tmp/access.log","loglevel":"warning","maskAddress":"half"}`)
 	a := &Config{LogConfig: original}
@@ -104,6 +106,7 @@ func TestCaptureConfigRequiresRestartAndPreservesPath(t *testing.T) {
 		t.Fatal("test process captures access events")
 	}
 }
+
 func TestAccessPathReportsCapturedLocalFile(t *testing.T) {
 	old := capturedAccessLogPath()
 	defer setCapturePath(old)
@@ -120,6 +123,7 @@ func TestAccessPathReportsCapturedLocalFile(t *testing.T) {
 		t.Fatalf("recovery failed: %s %v", contents, err)
 	}
 }
+
 func TestParseAccessEntryMissingAndRejected(t *testing.T) {
 	entry := accesslog.Parse("2026/10/10 12:00:00.123456 from tcp:192.0.2.1:123 rejected tcp:example.com:443")
 	if entry.DateTime == nil || entry.ToAddress != "tcp:example.com:443" || entry.Email != "" {

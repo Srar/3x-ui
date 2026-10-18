@@ -31,6 +31,7 @@ func verifyMessage(t *testing.T, msg []byte) {
 		t.Fatalf("wrong fields: %+v", e)
 	}
 }
+
 func TestUDPDeliveryAndDisable(t *testing.T) {
 	receiver, err := net.ListenPacket("udp", "127.0.0.1:0")
 	if err != nil {
@@ -54,6 +55,7 @@ func TestUDPDeliveryAndDisable(t *testing.T) {
 		t.Fatal("disabled sender delivered a message")
 	}
 }
+
 func readFrame(t *testing.T, r *bufio.Reader) []byte {
 	t.Helper()
 	prefix, err := r.ReadString(' ')
@@ -70,6 +72,7 @@ func readFrame(t *testing.T, r *bufio.Reader) []byte {
 	}
 	return frame
 }
+
 func TestTCPFramesUseByteLengths(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -91,6 +94,7 @@ func TestTCPFramesUseByteLengths(t *testing.T) {
 	verifyMessage(t, readFrame(t, r))
 	verifyMessage(t, readFrame(t, r))
 }
+
 func TestQueueLimitsAndMalformedRecords(t *testing.T) {
 	s := &sender{wake: make(chan struct{}, 1), host: "host"}
 	s.enqueue(strings.Repeat("x", maxMessageBytes))
@@ -119,6 +123,7 @@ func TestQueueLimitsAndMalformedRecords(t *testing.T) {
 		t.Fatal("byte limit exceeded")
 	}
 }
+
 func TestRetryRetainsHeadAndCancellation(t *testing.T) {
 	reserved, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -155,6 +160,7 @@ func TestRetryRetainsHeadAndCancellation(t *testing.T) {
 	_ = conn.SetReadDeadline(time.Now().Add(3 * time.Second))
 	verifyMessage(t, readFrame(t, bufio.NewReader(conn)))
 }
+
 func TestConfigValidation(t *testing.T) {
 	for _, host := range []string{"syslog.example.com", "192.0.2.1", "2001:db8::1"} {
 		c := DefaultConfig()

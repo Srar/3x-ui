@@ -47,7 +47,7 @@ func validateAccessLogSyslogTemplate(template string, c accesslog.Config) error 
 // SaveXraySettings stores the entire page atomically; a missing syslog field
 // preserves the saved configuration for older clients.
 func (s *XraySettingService) SaveXraySettings(template, testURL string, supplied *accesslog.Config) (accesslog.Config, error) {
-	c := accesslog.DefaultConfig()
+	var c accesslog.Config
 	var err error
 	if supplied != nil {
 		c = *supplied

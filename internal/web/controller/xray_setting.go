@@ -16,6 +16,7 @@ import (
 	"github.com/mhsanaei/3x-ui/v3/internal/xray"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/mhsanaei/3x-ui/v3/internal/accesslog"
 )
 
@@ -204,6 +205,8 @@ func (a *XraySettingController) warp(c *gin.Context) {
 		skey := c.PostForm("privateKey")
 		pkey := c.PostForm("publicKey")
 		resp, err = a.WarpService.RegWarp(skey, pkey)
+	case "regMasque":
+		resp, err = a.WarpService.RegWarpMasque()
 	case "changeIp":
 		resp, err = a.WarpService.ChangeWarpIP()
 		if err == nil {

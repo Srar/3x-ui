@@ -3,17 +3,21 @@
 package xray
 
 import (
+	"encoding/json"
 	"errors"
+	"net"
 	"os"
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
 
 	"github.com/op/go-logging"
 
+	"github.com/mhsanaei/3x-ui/v3/internal/accesslog"
 	xuilogger "github.com/mhsanaei/3x-ui/v3/internal/logger"
 )
 
@@ -118,6 +122,62 @@ func TestStopKillsProcessThatIgnoresSIGTERM(t *testing.T) {
 	}
 }
 
+func TestCaptureProcessExitPreservesUnterminatedOutput(t *testing.T) {
+	for _, mode := range []string{"access-tail", "crash-tail"} {
+		t.Run(mode, func(t *testing.T) {
+			dir := t.TempDir()
+			t.Setenv("XUI_LOG_FOLDER", dir)
+			receiver, err := net.ListenPacket("udp", "127.0.0.1:0")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer receiver.Close()
+			accesslog.Configure(accesslog.Config{Enabled: true, Protocol: "udp", Host: "127.0.0.1", Port: receiver.LocalAddr().(*net.UDPAddr).Port})
+			defer accesslog.Configure(accesslog.DefaultConfig())
+			p := newProcess(nil)
+			path := filepath.Join(dir, "access.log")
+			cmd := exec.Command(os.Args[0], "-test.run=^TestXrayProcessHelper$", "--", mode)
+			cmd.Env = append(os.Environ(), "XRAY_PROCESS_HELPER=1")
+			cmd.Stdout = &accessOutput{path: path, diagnostics: p.logWriter}
+			cmd.Stderr = p.logWriter
+			if err := p.startCommand(cmd); err != nil {
+				t.Fatal(err)
+			}
+			if err := p.waitForExit(5 * time.Second); err != nil {
+				_ = cmd.Process.Kill()
+				t.Fatalf("captured child did not exit: %v", err)
+			}
+			got, err := os.ReadFile(path)
+			if err != nil || string(got) != liveAccess+"\n" {
+				t.Fatalf("final access record = %q, %v", got, err)
+			}
+			_ = receiver.SetReadDeadline(time.Now().Add(3 * time.Second))
+			packet := make([]byte, 65535)
+			n, _, err := receiver.ReadFrom(packet)
+			if err != nil {
+				t.Fatalf("final syslog record: %v", err)
+			}
+			start := strings.IndexByte(string(packet[:n]), '{')
+			if start < 0 {
+				t.Fatalf("syslog packet has no JSON: %q", packet[:n])
+			}
+			var entry accesslog.Entry
+			if err := json.Unmarshal(packet[start:n], &entry); err != nil || entry.Raw != liveAccess {
+				t.Fatalf("final syslog entry = %+v, %v", entry, err)
+			}
+			reports := crashReportsIn(t, dir)
+			if mode == "crash-tail" {
+				const want = "panic: captured crash\n\ngoroutine 1 [running]:\nmain.main()\n\t/src/main.go:5"
+				if len(reports) != 1 || reports[0] != want {
+					t.Fatalf("captured crash reports = %q, want [%q]", reports, want)
+				}
+			} else if len(reports) != 0 {
+				t.Fatalf("access record produced crash reports: %q", reports)
+			}
+		})
+	}
+}
+
 func initProcessTestLogger(t *testing.T) {
 	t.Helper()
 	t.Setenv("XUI_LOG_FOLDER", t.TempDir())
@@ -178,6 +238,12 @@ func TestXrayProcessHelper(t *testing.T) {
 	}
 
 	switch mode {
+	case "access-tail":
+		_, _ = os.Stdout.WriteString(liveAccess)
+		os.Exit(0)
+	case "crash-tail":
+		_, _ = os.Stdout.WriteString(liveAccess + "\npanic: captured crash\n\ngoroutine 1 [running]:\nmain.main()\n\t/src/main.go:5")
+		os.Exit(0)
 	case "delayed-term":
 		sigCh := make(chan os.Signal, 1)
 		signal.Notify(sigCh, syscall.SIGTERM)

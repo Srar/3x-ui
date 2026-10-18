@@ -14,13 +14,16 @@ import (
 )
 
 // AccessLogFileMu serializes panel-owned access-log appends and truncation.
-var AccessLogFileMu sync.Mutex
-var capturePath struct {
-	sync.RWMutex
-	path string
-}
+var (
+	AccessLogFileMu sync.Mutex
+	capturePath     struct {
+		sync.RWMutex
+		path string
+	}
+)
 
 func setCapturePath(path string) { capturePath.Lock(); capturePath.path = path; capturePath.Unlock() }
+
 func capturedAccessLogPath() string {
 	capturePath.RLock()
 	defer capturePath.RUnlock()
@@ -50,6 +53,7 @@ func (c *Config) runtimeJSON() ([]byte, error) {
 	}
 	return json.MarshalIndent(&snapshot, "", "  ")
 }
+
 func (c *Config) accessFile() string {
 	var log struct {
 		Access string `json:"access"`
@@ -116,6 +120,21 @@ func (w *accessOutput) Write(data []byte) (int, error) {
 	}
 	return total, nil
 }
+
+// Flush delivers the final stdout record before the diagnostic writer is flushed.
+// The child must have exited so every pipe write has completed.
+func (w *accessOutput) Flush() {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if !w.discarding && len(w.pending) != 0 {
+		if !w.line(strings.TrimSuffix(string(w.pending), "\r")) {
+			_, _ = w.diagnostics.Write(w.pending)
+		}
+	}
+	w.pending = nil
+	w.discarding = false
+}
+
 func (w *accessOutput) line(line string) bool {
 	fields := strings.Fields(line)
 	// Xray emits timestamp + AccessMessage ("from ... accepted/rejected ...")

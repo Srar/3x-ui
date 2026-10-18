@@ -1666,6 +1666,9 @@ func (s *SettingService) UpdateAllSetting(allSetting *entity.AllSetting, clears 
 	if err := validateSubJsonDnsSetting(allSetting); err != nil {
 		return err
 	}
+	if err := validateFinalMaskJSONSalamander(allSetting.SubJsonFinalMask); err != nil {
+		return err
+	}
 	if err := allSetting.CheckValid(); err != nil {
 		return err
 	}

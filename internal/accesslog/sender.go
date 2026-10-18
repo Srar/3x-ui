@@ -48,9 +48,11 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-const maxMessages = 4096
-const maxQueueBytes = 32 << 20
-const maxMessageBytes = 60 << 10
+const (
+	maxMessages     = 4096
+	maxQueueBytes   = 32 << 20
+	maxMessageBytes = 60 << 10
+)
 
 type sender struct {
 	config      Config
@@ -138,6 +140,7 @@ func Publish(line string) {
 	}
 	manager.RUnlock()
 }
+
 func headerToken(v string, max int) string {
 	v = strings.Map(func(r rune) rune {
 		if r < 33 || r > 126 {
@@ -153,6 +156,7 @@ func headerToken(v string, max int) string {
 	}
 	return v
 }
+
 func (s *sender) enqueue(line string) {
 	entry := Parse(line)
 	body, err := json.Marshal(entry)
@@ -177,12 +181,14 @@ func (s *sender) enqueue(line string) {
 	default:
 	}
 }
+
 func (s *sender) warnLocked(message string) {
 	if time.Since(s.lastWarning) >= time.Minute {
 		s.lastWarning = time.Now()
 		logger.Warning(message)
 	}
 }
+
 func (s *sender) run() {
 	defer close(s.done)
 	var conn net.Conn

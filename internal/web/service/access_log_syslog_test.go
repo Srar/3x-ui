@@ -43,6 +43,7 @@ func TestSaveXraySettingsSyslogAndLegacyClient(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
 func TestSaveXraySettingsTransactionRollback(t *testing.T) {
 	setupSettingTestDB(t)
 	s := &XraySettingService{}
@@ -68,6 +69,7 @@ func TestSaveXraySettingsTransactionRollback(t *testing.T) {
 		t.Fatal("transaction was not rolled back")
 	}
 }
+
 func TestValidateSyslogLogConfiguration(t *testing.T) {
 	c := accesslog.Config{Enabled: true, Protocol: "udp", Host: "host", Port: 514}
 	for _, template := range []string{`{}`, `{"log":null}`, `{"log":{}}`, `{"log":{"access":"none"}}`, `{"log":{"access":"","loglevel":"warning"}}`} {
